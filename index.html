@@ -3,33 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buscador SAP / Barcode</title>
+    <title>Validador SAP</title>
+    <!-- Cargamos la librería desde un servidor confiable -->
     <script src="https://unpkg.com"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 15px; background-color: #f8f9fa; color: #333; }
-        .container { max-width: 500px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
-        h2 { color: #0056b3; margin-bottom: 5px; }
-        p { font-size: 0.9em; color: #666; margin-bottom: 20px; }
-        #reader { width: 100%; border-radius: 10px; overflow: hidden; margin-bottom: 15px; border: 2px solid #ddd; }
-        input { width: 100%; padding: 15px; margin: 10px 0; border: 1.5px solid #0056b3; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; border: none; font-size: 16px; transition: 0.3s; }
-        .btn-scan { background-color: #6f42c1; color: white; margin-bottom: 10px; }
+        body { font-family: sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        /* IMPORTANTE: El contenedor de la cámara debe tener un tamaño mínimo */
+        #reader { width: 100%; min-height: 250px; background: #eee; border-radius: 8px; margin-bottom: 10px; border: 2px solid #ddd; display: none; }
+        button { width: 100%; padding: 15px; margin: 5px 0; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
+        .btn-scan { background-color: #6f42c1; color: white; }
         .btn-search { background-color: #0056b3; color: white; }
-        #resultado { margin-top: 20px; padding: 15px; border-radius: 10px; display: none; text-align: left; }
-        .exito { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
-        .no-encontrado { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
+        #resultado { margin-top: 15px; padding: 15px; border-radius: 8px; display: none; font-weight: bold; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .exito { background-color: #d4edda; color: #155724; }
     </style>
 </head>
 <body>
 
-<div class="container">
+<div class="card">
     <h2>Validador de SAP</h2>
-    <p>Escanea o ingresa el código para ver el estado.</p>
-    
+    <p>Escanea o ingresa el código</p>
+
+    <!-- AQUÍ SE VERÁ LA CÁMARA -->
     <div id="reader"></div>
-    <button class="btn-scan" onclick="iniciarEscaner()">📸 Escanear Código</button>
     
-    <input type="text" id="codigoInput" placeholder="Ingresa SAP o Código de Barras">
+    <button class="btn-scan" id="btnAccion" onclick="controlarEscaneo()">📸 Escanear Código</button>
+    
+    <input type="text" id="codigoInput" placeholder="Ingresa SAP o Barcode">
     <button class="btn-search" onclick="buscarManual()">🔍 Buscar Problema</button>
 
     <div id="resultado"></div>
@@ -67,20 +69,57 @@
         { sap: "12521971", barcode: "", problema: "Bloqueo de MP debido a issue de calidad" },
         { sap: "12513664", barcode: "", problema: "Atraso producción +4 sem por falta de insumos" }
     ];
+ let html5QrCode;
 
-     let html5QrCode;
+    async function controlarEscaneo() {
+        const readerDiv = document.getElementById('reader');
+        const btn = document.getElementById('btnAccion');
+
+        if (!html5QrCode || !html5QrCode.isScanning) {
+            readerDiv.style.display = "block"; // Mostramos el cuadro
+            html5QrCode = new Html5Qrcode("reader");
+            
+            try {
+                await html5QrCode.start(
+                    { facingMode: "environment" }, 
+                    { fps: 10, qrbox: { width: 250, height: 150 } },
+                    (text) => {
+                        document.getElementById('codigoInput').value = text;
+                        buscarCodigo(text);
+                        detenerEscaneo();
+                    }
+                );
+                btn.innerText = "❌ Detener Cámara";
+                btn.style.backgroundColor = "#dc3545";
+            } catch (err) {
+                alert("Error: No se pudo abrir la cámara. Verifica que la URL sea HTTPS.");
+                readerDiv.style.display = "none";
+            }
+        } else {
+            detenerEscaneo();
+        }
+    }
+
+    async function detenerEscaneo() {
+        if (html5QrCode) {
+            await html5QrCode.stop();
+            document.getElementById('reader').style.display = "none";
+            const btn = document.getElementById('btnAccion');
+            btn.innerText = "📸 Escanear Código";
+            btn.style.backgroundColor = "#6f42c1";
+        }
+    }
 
     function buscarCodigo(valor) {
         const resDiv = document.getElementById('resultado');
-        const encontrado = BASE_DATOS.find(p => p.sap === valor || (p.barcode !== "" && p.barcode === valor));
-
+        const encontrado = BASE_DATOS.find(p => p.sap === valor);
         resDiv.style.display = "block";
         if (encontrado) {
             resDiv.className = "exito";
-            resDiv.innerHTML = `<strong>⚠️ PROBLEMA</strong><br>SAP: ${encontrado.sap}<br>${encontrado.problema}`;
+            resDiv.innerHTML = `⚠️ PROBLEMA: ${encontrado.problema}`;
         } else {
-            resDiv.className = "no-encontrado";
-            resDiv.innerHTML = `<strong>✅ SIN PROBLEMAS</strong><br>Código: ${valor}`;
+            resDiv.className = "error";
+            resDiv.innerHTML = "✅ Sin problemas registrados.";
         }
     }
 
@@ -88,32 +127,8 @@
         const val = document.getElementById('codigoInput').value.trim();
         if (val) buscarCodigo(val);
     }
-
-    async function iniciarEscaner() {
-    const html5QrCode = new Html5Qrcode("reader");
-    
-    // Mostramos un mensaje de carga
-    document.getElementById('resultado').style.display = "block";
-    document.getElementById('resultado').innerHTML = "Iniciando cámara...";
-
-    const qrConfig = { fps: 10, qrbox: { width: 250, height: 150 } };
-
-    try {
-        await html5QrCode.start(
-            { facingMode: "environment" }, // Fuerza cámara trasera
-            qrConfig,
-            (text) => {
-                document.getElementById('codigoInput').value = text;
-                buscarCodigo(text);
-                html5QrCode.stop();
-            }
-        );
-        document.getElementById('resultado').style.display = "none";
-    } catch (err) {
-        console.error(err);
-        alert("Error: Asegúrate de estar usando HTTPS y de haber permitido el acceso a la cámara en los ajustes de tu Motorola.");
-    }
-}
 </script>
+
 </body>
 </html>
+    

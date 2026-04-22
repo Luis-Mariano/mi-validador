@@ -37,46 +37,30 @@
     <div id="resultado"></div>
 </div>
 
-<script>
-    // --- DATOS CARGADOS DESDE TU IMAGEN ---
+    <script>
     const BASE_DATOS = [
-        { sap: "5003014", barcode: "", problema: "Pendiente Alza" },
-        { sap: "5026741", barcode: "", problema: "Pendiente Alza" },
-        { sap: "5011412", barcode: "", problema: "Pendiente Alza" },
-        { sap: "5074669", barcode: "", problema: "Pendiente Alza" },
-        { sap: "252090", barcode: "", problema: "Pendiente Alza" },
-        { sap: "12616773", barcode: "", problema: "Despriorización por decisión de negocio" },
-        { sap: "12618107", barcode: "", problema: "Coberturas ajustadas por mal performance" },
-        { sap: "12527348", barcode: "", problema: "Priorización mix de línea 100x100" },
-        { sap: "12321814", barcode: "", problema: "Impacto factores externos (lluvia)" },
-        { sap: "12618111", barcode: "", problema: "Altas coberturas por menor venta" },
-        { sap: "799192732645", barcode: "", problema: "Cierre Marzo 172%, principalmente por stock" },
-        { sap: "12558241", barcode: "", problema: "Impacto plan de producción W14 y W15" },
-        { sap: "12573113", barcode: "", problema: "Impacto por incumplimiento planes de entrega" },
-        { sap: "12619203", barcode: "", problema: "Baja cobertura W19 por retraso en el arribo" },
-        { sap: "12617778", barcode: "", problema: "Saturación de línea Mespack" },
-        { sap: "12580795", barcode: "", problema: "Solicitud de nuevos análisis por parte de calidad" },
-        { sap: "12540300", barcode: "", problema: "Abastecimiento de grasa gallina con retraso" },
-        { sap: "12628834", barcode: "", problema: "Baja cobertura debido por agote de stock" },
-        { sap: "12225814", barcode: "", problema: "Aumento de compra WM por adelanto de compra" },
-        { sap: "12436511", barcode: "", problema: "Riesgo de baja cobertura y quiebre de stock" },
-        { sap: "12141545", barcode: "", problema: "Aumento de compra WM por adelanto" },
-        { sap: "12482910", barcode: "", problema: "Quiebre por priorización de mix (foco stock)" },
-        { sap: "12493299", barcode: "", problema: "Baja cobertura por alta saturación de líneas" },
-        { sap: "12621013", barcode: "", problema: "Baja cobertura por priorización de mix" },
-        { sap: "12605484", barcode: "", problema: "Alza de demanda (+30%) por mejor performance" },
-        { sap: "13301674", barcode: "", problema: "Bloqueo preventivo por desvío de calidad" },
-        { sap: "12521971", barcode: "", problema: "Bloqueo de MP debido a issue de calidad" },
-        { sap: "12513664", barcode: "", problema: "Atraso producción +4 sem por falta de insumos" }
+        { sap: "5003014", problema: "Pendiente Alza" },
+        { sap: "12616773", problema: "Despriorización por negocio" }
     ];
- let html5QrCode;
+
+    let html5QrCode;
 
     async function controlarEscaneo() {
         const readerDiv = document.getElementById('reader');
         const btn = document.getElementById('btnAccion');
 
+        // PASO A: Pedir permiso explícito antes de empezar
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            stream.getTracks().forEach(track => track.stop()); // Cerramos la prueba de cámara
+        } catch (err) {
+            alert("No se dio permiso a la cámara. Ve a Ajustes > Chrome > Permisos y activa la Cámara.");
+            return;
+        }
+
+        // PASO B: Iniciar el escáner si el permiso fue concedido
         if (!html5QrCode || !html5QrCode.isScanning) {
-            readerDiv.style.display = "block"; // Mostramos el cuadro
+            readerDiv.style.display = "block";
             html5QrCode = new Html5Qrcode("reader");
             
             try {
@@ -92,8 +76,7 @@
                 btn.innerText = "❌ Detener Cámara";
                 btn.style.backgroundColor = "#dc3545";
             } catch (err) {
-                alert("Error: No se pudo abrir la cámara. Verifica que la URL sea HTTPS.");
-                readerDiv.style.display = "none";
+                console.error(err);
             }
         } else {
             detenerEscaneo();
@@ -102,11 +85,10 @@
 
     async function detenerEscaneo() {
         if (html5QrCode) {
-            await html5QrCode.stop();
+            try { await html5QrCode.stop(); } catch(e) {}
             document.getElementById('reader').style.display = "none";
-            const btn = document.getElementById('btnAccion');
-            btn.innerText = "📸 Escanear Código";
-            btn.style.backgroundColor = "#6f42c1";
+            document.getElementById('btnAccion').innerText = "📸 Escanear Código";
+            document.getElementById('btnAccion').style.backgroundColor = "#6f42c1";
         }
     }
 
@@ -128,6 +110,7 @@
         if (val) buscarCodigo(val);
     }
 </script>
+
 
 </body>
 </html>

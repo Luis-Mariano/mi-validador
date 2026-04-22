@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buscador SAP / Barcode</title>
+    <script src="https://unpkg.com"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 15px; background-color: #f8f9fa; color: #333; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+        h2 { color: #0056b3; margin-bottom: 5px; }
+        p { font-size: 0.9em; color: #666; margin-bottom: 20px; }
+        #reader { width: 100%; border-radius: 10px; overflow: hidden; margin-bottom: 15px; border: 2px solid #ddd; }
+        input { width: 100%; padding: 15px; margin: 10px 0; border: 1.5px solid #0056b3; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; border-radius: 8px; font-weight: bold; cursor: pointer; border: none; font-size: 16px; transition: 0.3s; }
+        .btn-scan { background-color: #6f42c1; color: white; margin-bottom: 10px; }
+        .btn-search { background-color: #0056b3; color: white; }
+        #resultado { margin-top: 20px; padding: 15px; border-radius: 10px; display: none; text-align: left; }
+        .exito { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .no-encontrado { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Validador de SAP</h2>
+    <p>Escanea o ingresa el código para ver el estado.</p>
+    
+    <div id="reader"></div>
+    <button class="btn-scan" onclick="iniciarEscaner()">📸 Escanear Código</button>
+    
+    <input type="text" id="codigoInput" placeholder="Ingresa SAP o Código de Barras">
+    <button class="btn-search" onclick="buscarManual()">🔍 Buscar Problema</button>
+
+    <div id="resultado"></div>
+</div>
+
+<script>
+    // --- DATOS CARGADOS DESDE TU IMAGEN ---
+    const BASE_DATOS = [
+        { sap: "5003014", barcode: "", problema: "Pendiente Alza" },
+        { sap: "5026741", barcode: "", problema: "Pendiente Alza" },
+        { sap: "5011412", barcode: "", problema: "Pendiente Alza" },
+        { sap: "5074669", barcode: "", problema: "Pendiente Alza" },
+        { sap: "252090", barcode: "", problema: "Pendiente Alza" },
+        { sap: "12616773", barcode: "", problema: "Despriorización por decisión de negocio" },
+        { sap: "12618107", barcode: "", problema: "Coberturas ajustadas por mal performance" },
+        { sap: "12527348", barcode: "", problema: "Priorización mix de línea 100x100" },
+        { sap: "12321814", barcode: "", problema: "Impacto factores externos (lluvia)" },
+        { sap: "12618111", barcode: "", problema: "Altas coberturas por menor venta" },
+        { sap: "799192732645", barcode: "", problema: "Cierre Marzo 172%, principalmente por stock" },
+        { sap: "12558241", barcode: "", problema: "Impacto plan de producción W14 y W15" },
+        { sap: "12573113", barcode: "", problema: "Impacto por incumplimiento planes de entrega" },
+        { sap: "12619203", barcode: "", problema: "Baja cobertura W19 por retraso en el arribo" },
+        { sap: "12617778", barcode: "", problema: "Saturación de línea Mespack" },
+        { sap: "12580795", barcode: "", problema: "Solicitud de nuevos análisis por parte de calidad" },
+        { sap: "12540300", barcode: "", problema: "Abastecimiento de grasa gallina con retraso" },
+        { sap: "12628834", barcode: "", problema: "Baja cobertura debido por agote de stock" },
+        { sap: "12225814", barcode: "", problema: "Aumento de compra WM por adelanto de compra" },
+        { sap: "12436511", barcode: "", problema: "Riesgo de baja cobertura y quiebre de stock" },
+        { sap: "12141545", barcode: "", problema: "Aumento de compra WM por adelanto" },
+        { sap: "12482910", barcode: "", problema: "Quiebre por priorización de mix (foco stock)" },
+        { sap: "12493299", barcode: "", problema: "Baja cobertura por alta saturación de líneas" },
+        { sap: "12621013", barcode: "", problema: "Baja cobertura por priorización de mix" },
+        { sap: "12605484", barcode: "", problema: "Alza de demanda (+30%) por mejor performance" },
+        { sap: "13301674", barcode: "", problema: "Bloqueo preventivo por desvío de calidad" },
+        { sap: "12521971", barcode: "", problema: "Bloqueo de MP debido a issue de calidad" },
+        { sap: "12513664", barcode: "", problema: "Atraso producción +4 sem por falta de insumos" }
+    ];
+
+    function buscarCodigo(valor) {
+        const resDiv = document.getElementById('resultado');
+        const encontrado = BASE_DATOS.find(p => p.sap === valor || (p.barcode !== "" && p.barcode === valor));
+
+        resDiv.style.display = "block";
+        if (encontrado) {
+            resDiv.className = "exito";
+            resDiv.innerHTML = `<strong>⚠️ PROBLEMA ENCONTRADO</strong><br>
+                                <strong>SAP:</strong> ${encontrado.sap}<br>
+                                <strong>Estado:</strong> ${encontrado.problema}`;
+        } else {
+            resDiv.className = "no-encontrado";
+            resDiv.innerHTML = `<strong>✅ SIN PROBLEMAS</strong><br>
+                                El código <strong>${valor}</strong> no está en la lista de errores.`;
+        }
+    }
+
+    function buscarManual() {
+        const val = document.getElementById('codigoInput').value.trim();
+        if (val) buscarCodigo(val);
+    }
+
+    function iniciarEscaner() {
+        const html5QrCode = new Html5Qrcode("reader");
+        html5QrCode.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 250, height: 150 } },
+            (text) => {
+                document.getElementById('codigoInput').value = text;
+                buscarCodigo(text);
+                html5QrCode.stop();
+            }
+        ).catch(err => alert("Error de cámara: " + err));
+    }
+</script>
+
+</body>
+</html>

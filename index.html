@@ -68,6 +68,8 @@
         { sap: "12513664", barcode: "", problema: "Atraso producción +4 sem por falta de insumos" }
     ];
 
+     let html5QrCode;
+
     function buscarCodigo(valor) {
         const resDiv = document.getElementById('resultado');
         const encontrado = BASE_DATOS.find(p => p.sap === valor || (p.barcode !== "" && p.barcode === valor));
@@ -75,13 +77,10 @@
         resDiv.style.display = "block";
         if (encontrado) {
             resDiv.className = "exito";
-            resDiv.innerHTML = `<strong>⚠️ PROBLEMA ENCONTRADO</strong><br>
-                                <strong>SAP:</strong> ${encontrado.sap}<br>
-                                <strong>Estado:</strong> ${encontrado.problema}`;
+            resDiv.innerHTML = `<strong>⚠️ PROBLEMA</strong><br>SAP: ${encontrado.sap}<br>${encontrado.problema}`;
         } else {
             resDiv.className = "no-encontrado";
-            resDiv.innerHTML = `<strong>✅ SIN PROBLEMAS</strong><br>
-                                El código <strong>${valor}</strong> no está en la lista de errores.`;
+            resDiv.innerHTML = `<strong>✅ SIN PROBLEMAS</strong><br>Código: ${valor}`;
         }
     }
 
@@ -90,19 +89,33 @@
         if (val) buscarCodigo(val);
     }
 
-    function iniciarEscaner() {
-        const html5QrCode = new Html5Qrcode("reader");
+    async function iniciarEscaner() {
+        // Si ya hay un escaner funcionando, lo detenemos primero
+        if (html5QrCode) {
+            try { await html5QrCode.stop(); } catch (e) { }
+        }
+
+        html5QrCode = new Html5Qrcode("reader");
+        
+        const config = { 
+            fps: 10, 
+            qrbox: { width: 250, height: 150 } 
+        };
+
+        // Forzamos el uso de la cámara trasera (environment)
         html5QrCode.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 250, height: 150 } },
+            { facingMode: "environment" }, 
+            config,
             (text) => {
                 document.getElementById('codigoInput').value = text;
                 buscarCodigo(text);
-                html5QrCode.stop();
+                html5QrCode.stop(); // Detiene la cámara al encontrar código
             }
-        ).catch(err => alert("Error de cámara: " + err));
+        ).catch(err => {
+            console.error(err);
+            alert("Error: No se pudo acceder a la cámara. Revisa los permisos del navegador o asegúrate de usar HTTPS.");
+        });
     }
 </script>
-
 </body>
 </html>

@@ -4,12 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Validador SAP</title>
-    <!-- Cargamos la librería desde un servidor confiable -->
+    <!-- LIBRERÍA CORREGIDA -->
     <script src="https://unpkg.com"></script>
     <style>
         body { font-family: sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
-        /* IMPORTANTE: El contenedor de la cámara debe tener un tamaño mínimo */
         #reader { width: 100%; min-height: 250px; background: #eee; border-radius: 8px; margin-bottom: 10px; border: 2px solid #ddd; display: none; }
         button { width: 100%; padding: 15px; margin: 5px 0; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
         .btn-scan { background-color: #6f42c1; color: white; }
@@ -25,19 +24,14 @@
 <div class="card">
     <h2>Validador de SAP</h2>
     <p>Escanea o ingresa el código</p>
-
-    <!-- AQUÍ SE VERÁ LA CÁMARA -->
     <div id="reader"></div>
-    
     <button class="btn-scan" id="btnAccion" onclick="controlarEscaneo()">📸 Escanear Código</button>
-    
     <input type="text" id="codigoInput" placeholder="Ingresa SAP o Barcode">
     <button class="btn-search" onclick="buscarManual()">🔍 Buscar Problema</button>
-
     <div id="resultado"></div>
 </div>
 
-    <script>
+<script>
     const BASE_DATOS = [
         { sap: "5003014", problema: "Pendiente Alza" },
         { sap: "12616773", problema: "Despriorización por negocio" }
@@ -49,24 +43,23 @@
         const readerDiv = document.getElementById('reader');
         const btn = document.getElementById('btnAccion');
 
-        // PASO A: Pedir permiso explícito antes de empezar
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-            stream.getTracks().forEach(track => track.stop()); // Cerramos la prueba de cámara
-        } catch (err) {
-            alert("No se dio permiso a la cámara. Ve a Ajustes > Chrome > Permisos y activa la Cámara.");
-            return;
-        }
-
-        // PASO B: Iniciar el escáner si el permiso fue concedido
         if (!html5QrCode || !html5QrCode.isScanning) {
+            // PEDIR PERMISO
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+                stream.getTracks().forEach(track => track.stop());
+            } catch (err) {
+                alert("Permiso denegado. Revisa los ajustes de Chrome.");
+                return;
+            }
+
             readerDiv.style.display = "block";
             html5QrCode = new Html5Qrcode("reader");
             
             try {
                 await html5QrCode.start(
                     { facingMode: "environment" }, 
-                    { fps: 10, qrbox: { width: 250, height: 150 } },
+                    { fps: 10, qrbox: { width: 250, height: 150 }, aspectRatio: 1.0 },
                     (text) => {
                         document.getElementById('codigoInput').value = text;
                         buscarCodigo(text);
@@ -111,7 +104,5 @@
     }
 </script>
 
-
 </body>
 </html>
-    

@@ -90,32 +90,30 @@
     }
 
     async function iniciarEscaner() {
-        // Si ya hay un escaner funcionando, lo detenemos primero
-        if (html5QrCode) {
-            try { await html5QrCode.stop(); } catch (e) { }
-        }
+    const html5QrCode = new Html5Qrcode("reader");
+    
+    // Mostramos un mensaje de carga
+    document.getElementById('resultado').style.display = "block";
+    document.getElementById('resultado').innerHTML = "Iniciando cámara...";
 
-        html5QrCode = new Html5Qrcode("reader");
-        
-        const config = { 
-            fps: 10, 
-            qrbox: { width: 250, height: 150 } 
-        };
+    const qrConfig = { fps: 10, qrbox: { width: 250, height: 150 } };
 
-        // Forzamos el uso de la cámara trasera (environment)
-        html5QrCode.start(
-            { facingMode: "environment" }, 
-            config,
+    try {
+        await html5QrCode.start(
+            { facingMode: "environment" }, // Fuerza cámara trasera
+            qrConfig,
             (text) => {
                 document.getElementById('codigoInput').value = text;
                 buscarCodigo(text);
-                html5QrCode.stop(); // Detiene la cámara al encontrar código
+                html5QrCode.stop();
             }
-        ).catch(err => {
-            console.error(err);
-            alert("Error: No se pudo acceder a la cámara. Revisa los permisos del navegador o asegúrate de usar HTTPS.");
-        });
+        );
+        document.getElementById('resultado').style.display = "none";
+    } catch (err) {
+        console.error(err);
+        alert("Error: Asegúrate de estar usando HTTPS y de haber permitido el acceso a la cámara en los ajustes de tu Motorola.");
     }
+}
 </script>
 </body>
 </html>

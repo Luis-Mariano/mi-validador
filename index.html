@@ -1,110 +1,201 @@
-
-
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Validador SAP</title>
-    <!-- LIBRERÍA CORREGIDA -->
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
-    <style>
-        body { font-family: sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
-        #reader { width: 100%; min-height: 250px; background: #eee; border-radius: 8px; margin-bottom: 10px; border: 2px solid #ddd; display: none; }
-        button { width: 100%; padding: 15px; margin: 5px 0; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 16px; }
-        .btn-scan { background-color: #6f42c1; color: white; }
-        .btn-search { background-color: #0056b3; color: white; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; }
-        #resultado { margin-top: 15px; padding: 15px; border-radius: 8px; display: none; font-weight: bold; }
-        .error { background-color: #f8d7da; color: #721c24; }
-        .exito { background-color: #d4edda; color: #155724; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Validador SAP</title>
+
+<!-- 🔥 Librería estable -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js" defer></script>
+
+<style>
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0;
+        font-family: sans-serif;
+        background: #f0f2f5;
+    }
+
+    .card {
+        width: 100%;
+        max-width: 420px;
+        margin: auto;
+        padding: 20px;
+        text-align: center;
+    }
+
+    h2 { margin-bottom: 5px; }
+
+    #reader {
+        width: 100%;
+        height: 280px;
+        background: black;
+        border-radius: 12px;
+        margin: 15px 0;
+        overflow: hidden;
+    }
+
+    button {
+        width: 100%;
+        padding: 16px;
+        margin: 8px 0;
+        border: none;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+    .btn-scan { background: #6f42c1; color: white; }
+    .btn-stop { background: #dc3545; color: white; }
+    .btn-search { background: #0056b3; color: white; }
+
+    input {
+        width: 100%;
+        padding: 14px;
+        margin-top: 10px;
+        border-radius: 10px;
+        border: 1px solid #ccc;
+        font-size: 16px;
+    }
+
+    #resultado {
+        margin-top: 15px;
+        padding: 15px;
+        border-radius: 10px;
+        display: none;
+        font-weight: bold;
+    }
+
+    .error { background: #f8d7da; color: #721c24; }
+    .exito { background: #d4edda; color: #155724; }
+</style>
 </head>
+
 <body>
 
 <div class="card">
-    <h2>Validador de SAP</h2>
+    <h2>Validador SAP</h2>
     <p>Escanea o ingresa el código</p>
+
     <div id="reader"></div>
-    <button class="btn-scan" id="btnAccion" onclick="controlarEscaneo()">📸 Escanear Código</button>
+
+    <button id="btnAccion" class="btn-scan">📸 Escanear Código</button>
+
     <input type="text" id="codigoInput" placeholder="Ingresa SAP o Barcode">
-    <button class="btn-search" onclick="buscarManual()">🔍 Buscar Problema</button>
+
+    <button class="btn-search" id="btnBuscar">🔍 Buscar Problema</button>
+
     <div id="resultado"></div>
 </div>
 
 <script>
-    const BASE_DATOS = [
-        { sap: "5003014", problema: "Pendiente Alza" },
-        { sap: "12616773", problema: "Despriorización por negocio" }
-    ];
+const BASE_DATOS = [
+    { sap: "5003014", problema: "Pendiente Alza" },
+    { sap: "12616773", problema: "Despriorización por negocio" }
+];
 
-    let html5QrCode;
+let html5QrCode = null;
+let scanning = false;
 
-    async function controlarEscaneo() {
-        const readerDiv = document.getElementById('reader');
-        const btn = document.getElementById('btnAccion');
+// 🔥 Esperar a que cargue TODO
+window.addEventListener("load", () => {
 
-        if (!html5QrCode || !html5QrCode.isScanning) {
-            // PEDIR PERMISO
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-                stream.getTracks().forEach(track => track.stop());
-            } catch (err) {
-                alert("Permiso denegado. Revisa los ajustes de Chrome.");
+    document.getElementById("btnAccion").addEventListener("click", controlarEscaneo);
+    document.getElementById("btnBuscar").addEventListener("click", buscarManual);
+
+});
+
+async function controlarEscaneo() {
+
+    if (typeof Html5Qrcode === "undefined") {
+        alert("Error cargando cámara. Recarga la página.");
+        return;
+    }
+
+    const btn = document.getElementById("btnAccion");
+
+    if (!scanning) {
+        html5QrCode = new Html5Qrcode("reader");
+
+        try {
+            const devices = await Html5Qrcode.getCameras();
+
+            if (!devices.length) {
+                alert("No hay cámaras disponibles");
                 return;
             }
 
-            readerDiv.style.display = "block";
-            html5QrCode = new Html5Qrcode("reader");
-            
-            try {
-                await html5QrCode.start(
-                    { facingMode: "environment" }, 
-                    { fps: 10, qrbox: { width: 250, height: 150 }, aspectRatio: 1.0 },
-                    (text) => {
-                        document.getElementById('codigoInput').value = text;
-                        buscarCodigo(text);
-                        detenerEscaneo();
-                    }
-                );
-                btn.innerText = "❌ Detener Cámara";
-                btn.style.backgroundColor = "#dc3545";
-            } catch (err) {
-                console.error(err);
-            }
-        } else {
-            detenerEscaneo();
-        }
-    }
+            // 🔥 Motorola fix → usar última cámara
+            const cameraId = devices[devices.length - 1].id;
 
-    async function detenerEscaneo() {
-        if (html5QrCode) {
-            try { await html5QrCode.stop(); } catch(e) {}
-            document.getElementById('reader').style.display = "none";
-            document.getElementById('btnAccion').innerText = "📸 Escanear Código";
-            document.getElementById('btnAccion').style.backgroundColor = "#6f42c1";
-        }
-    }
+            await html5QrCode.start(
+                cameraId,
+                {
+                    fps: 10,
+                    qrbox: 250,
+                    aspectRatio: 1.777
+                },
+                (text) => {
+                    document.getElementById("codigoInput").value = text;
+                    buscarCodigo(text);
+                    detenerEscaneo();
+                }
+            );
 
-    function buscarCodigo(valor) {
-        const resDiv = document.getElementById('resultado');
-        const encontrado = BASE_DATOS.find(p => p.sap === valor);
-        resDiv.style.display = "block";
-        if (encontrado) {
-            resDiv.className = "exito";
-            resDiv.innerHTML = `⚠️ PROBLEMA: ${encontrado.problema}`;
-        } else {
-            resDiv.className = "error";
-            resDiv.innerHTML = "✅ Sin problemas registrados.";
-        }
-    }
+            scanning = true;
+            btn.textContent = "❌ Detener Cámara";
+            btn.classList.remove("btn-scan");
+            btn.classList.add("btn-stop");
 
-    function buscarManual() {
-        const val = document.getElementById('codigoInput').value.trim();
-        if (val) buscarCodigo(val);
+        } catch (err) {
+            console.error(err);
+            alert("No se pudo iniciar la cámara");
+        }
+
+    } else {
+        detenerEscaneo();
     }
+}
+
+async function detenerEscaneo() {
+    if (html5QrCode && scanning) {
+        await html5QrCode.stop();
+        scanning = false;
+
+        const btn = document.getElementById("btnAccion");
+        btn.textContent = "📸 Escanear Código";
+        btn.classList.remove("btn-stop");
+        btn.classList.add("btn-scan");
+    }
+}
+
+function buscarCodigo(valor) {
+    const resDiv = document.getElementById("resultado");
+    const encontrado = BASE_DATOS.find(p => p.sap === valor);
+
+    resDiv.style.display = "block";
+
+    if (encontrado) {
+        resDiv.className = "exito";
+        resDiv.innerHTML = `⚠️ PROBLEMA: ${encontrado.problema}`;
+    } else {
+        resDiv.className = "error";
+        resDiv.innerHTML = "✅ Sin problemas registrados.";
+    }
+}
+
+function buscarManual() {
+    const val = document.getElementById("codigoInput").value.trim();
+    if (val) buscarCodigo(val);
+}
+
+// 🔥 Evita bug de pantalla gris en Android
+document.addEventListener("visibilitychange", () => {
+    if (document.hidden && scanning) {
+        detenerEscaneo();
+    }
+});
 </script>
 
 </body>
